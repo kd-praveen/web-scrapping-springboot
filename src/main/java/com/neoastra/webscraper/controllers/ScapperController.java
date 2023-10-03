@@ -7,6 +7,8 @@ import java.util.Set;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,13 +32,16 @@ public class ScapperController {
     @Autowired
     ScapperService scapperService;
 
+    Logger logger = LoggerFactory.getLogger(ScapperController.class);
+
+
     @GetMapping("/{vehicleModel}")
     public Set<ResponseDTO> getVehicleByModel(@PathVariable String vehicleModel) {
         return scapperService.getVehicleByModel(vehicleModel);
     }
 
-    @GetMapping("/movie/{searchString}")
-    public Set<AmazonResponseDTO> getMovieDetails(@PathVariable String searchString) {
+    @GetMapping("/amazon/{searchString}")
+    public Set<AmazonResponseDTO> getAmazonProductDetails(@PathVariable String searchString) {
 
         String dynamicScrapingUrl = "https://amazon.com/";
         String searchbarCSSSelectorQuery = "input#twotabsearchtextbox";
@@ -49,6 +54,9 @@ public class ScapperController {
 
         List<Element> productDetails = this.getElementsByCSSQuery(searchedHTMLResult, prodcuctDataCSSSelector);
 
+        logger.info("productDetails : " + productDetails );
+        logger.info("searchedHTMLResult = " + searchedHTMLResult);
+
         String productTextSelector = "span.a-size-base-plus.a-color-base.a-text-normal";
         String productPriceSelector = "span.a-price-whole";
         String productCurrencySelector = "span.a-price-symbol";
@@ -60,10 +68,6 @@ public class ScapperController {
             String productPrice = productDetail.select(productPriceSelector).text();
             String currency = productDetail.select(productCurrencySelector).text();
 
-            System.out.println("productName = " + productName);
-            System.out.println("currency = " + currency);
-            System.out.println("productPrice = " + productPrice);
-
             AmazonResponseDTO responseDTO = new AmazonResponseDTO();
             responseDTO.setProductName(productName);
             responseDTO.setProductPrice(productPrice);
@@ -73,6 +77,8 @@ public class ScapperController {
         return responseDTOS;
     }
 
+    
+
     public List<Element> getElementsByCSSQuery(Document doc, String cssQuery) {
         return doc.select(cssQuery);
     }
@@ -81,16 +87,16 @@ public class ScapperController {
             String searchText, int pageLoadTimeout) {
         try (
                 Playwright playwright = Playwright.create()) {
-            final BrowserType chromium = playwright.chromium();
-            final Browser browser = chromium.launch();
-            final Page page = browser.newPage();
-            page.navigate(url);
-            page.fill(searchbarCSSSelectorQuery, searchText);
-            page.click(searchButtonSelectorQuery);
-            page.waitForTimeout(pageLoadTimeout);
-            Document doc = Jsoup.parse(page.content());
-            browser.close();
-            return doc;
+                final BrowserType chromium = playwright.chromium();
+                final Browser browser = chromium.launch();
+                final Page page = browser.newPage();
+                page.navigate(url);
+                page.fill(searchbarCSSSelectorQuery, searchText);
+                page.click(searchButtonSelectorQuery);
+                page.waitForTimeout(pageLoadTimeout);
+                Document doc = Jsoup.parse(page.content());
+                browser.close();
+                return doc;
         } catch (Exception e) {
             e.printStackTrace();
         }
